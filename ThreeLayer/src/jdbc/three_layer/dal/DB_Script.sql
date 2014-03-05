@@ -1,179 +1,158 @@
---Nếu CSDL test đã tồn tại thì xóa nó đi
-IF EXISTS (SELECT * FROM sys.databases WHERE name = 'test' )
-	DROP DATABASE test
+USE master
 GO
---Tạo một CSDL có tên là test
-CREATE DATABASE test
+IF EXISTS(SELECT * FROM sys.databases WHERE name='LabDB')
+	DROP DATABASE LabDB
 GO
-USE test
+CREATE DATABASE LabDB
 GO
---Tạo bảng Class
-CREATE TABLE Class(
-	ID INT PRIMARY KEY IDENTITY,
-	Name VARCHAR(10),
-	Deleted INT NOT NULL DEFAULT (0)
+USE LabDB
+GO
+CREATE TABLE Classes
+(
+	ClassName varchar(15) CONSTRAINT PK_Classes PRIMARY KEY,
+	[Location] nvarchar(100),
+)
+CREATE TABLE Students
+(
+	RollNo varchar(6) CONSTRAINT PK_Students PRIMARY KEY,
+	FullName nvarchar(50) NOT NULL,
+	Birthday datetime,
+	[Address] nvarchar(100),
+	ClassName varchar(15) CONSTRAINT FK_Students_Classes FOREIGN KEY REFERENCES Classes(ClassName) ON UPDATE CASCADE
+)
+CREATE TABLE Subjects
+(
+	SubjectID varchar(15) CONSTRAINT PK_Subjects PRIMARY KEY,
+	SubjectName nvarchar(50) NOT NULL CONSTRAINT UQ_Subject_SubjectName UNIQUE,
+	TheoryNo int CONSTRAINT CK_Subject_TheoryNo CHECK(TheoryNo>0),
+	ParticeNo int CONSTRAINT CK_Subject_ParticeNo CHECK(ParticeNo>0),
+)
+CREATE TABLE Marks
+(
+	RollNo varchar(6) CONSTRAINT FK_Marks_Students FOREIGN KEY REFERENCES Students(RollNo),
+	SubjectID varchar(15) CONSTRAINT FK_Marks_Subjects FOREIGN KEY REFERENCES Subjects(SubjectID),
+	Mark float CONSTRAINT CK_Mark CHECK (Mark>=0 OR Mark<=25),
+	CONSTRAINT PK_Marks_Mark PRIMARY KEY(RollNo, SubjectID)
 )
 GO
---Tạo bảng Student
-CREATE TABLE Student(
-	ID INT PRIMARY KEY IDENTITY,
-	Name VARCHAR(30),
-	Age INT,
-	ClassID INT FOREIGN KEY REFERENCES Class(ID),
-	Deleted INT NOT NULL DEFAULT (0)
-)
-
-GO
-	INSERT INTO Class (Name) VALUES ('C1101I')
-GO
---Tạo một INSERT trigger nhằm đảm bảo giá trị của cột tuổi khi chèn vào là luôn luôn lớn hơn 16
-CREATE TRIGGER CheckAgeOnInsert
-ON Student
-FOR INSERT
-AS 
-	BEGIN
-		IF EXISTS(SELECT * FROM inserted WHERE Age<16)
-		BEGIN
-			PRINT 'Tuoi khong the nho hon 16';
-			ROLLBACK TRANSACTION;
-		END
-	END
-GO
---Kiểm tra sự hoạt động của INSERT trigger vừa tạo ở trên
---Câu lệnh sau sẽ không thể chèn vào vì có tuổi nhỏ hơn 16
-INSERT INTO Student VALUES('Nguyen Van Teo', 15, 1, 0)
-
-GO
---Tạo một UPDATE trigger nhằm đảm bảo rằng khi tiến hành cập nhật dữ liệu thì tuổi mới
---phải luôn lớn hơn tuổi cũ
-CREATE TRIGGER CheckAgeOnUpdate
-ON Student
-FOR UPDATE
-AS
-	BEGIN
-		IF EXISTS(SELECT * FROM inserted I INNER JOIN deleted D 
-			ON I.ID=D.ID WHERE D.Age>I.Age)
-		BEGIN
-			PRINT 'Tuoi moi khong the nho hon tuoi cu';
-			ROLLBACK TRANSACTION;
-		END
-	END
-GO
---Kiểm tra sự hoạt động của trigger vừa tạo.
--- Chèn một sinh viên có tuổi là 20 vào bảng Student
-INSERT INTO Student VALUES('Nguyen Van Teo', 20, 1, 0)
---Tiến hành cập nhật tuổi cho sinh viên trên, câu lệnh này sẽ cập nhật được tuổi của sinh viên
---Bởi vì tuổi mới là 19, trong khi đó tuổi cũ là 20
-UPDATE Student SET Age = 19 WHERE Name LIKE 'Nguyen Van Teo';
+--INSERT DATA
+INSERT INTO Classes VALUES('T1107G', 'FAT3')
+INSERT INTO Classes VALUES('T1105L', 'FAT1')
+INSERT INTO Classes VALUES('T1109L', 'FAT1')
+INSERT INTO Classes VALUES('C1105I', 'FAT3')
+INSERT INTO Students VALUES('C00111', N'Nguyen Van A', '12/12/1987', N'Ha Noi', 'T1107G')
+INSERT INTO Students VALUES('C00112', N'Nguyen Van B', '12/12/1987', N'Ha Noi', 'T1107G')
+INSERT INTO Students VALUES('C00113', N'Nguyen Van C', '12/12/1987', N'Ha Noi', 'T1107G')
+INSERT INTO Students VALUES('C00114', N'Nguyen Van D', '12/12/1987', N'Ha Noi', 'T1107G')
+INSERT INTO Students VALUES('A00111', N'Tran Thi X', '12/12/1987', N'Ha Noi', 'T1105L')
+INSERT INTO Students VALUES('A00112', N'Tran Thi Y', '12/12/1987', N'Ha Noi', 'T1105L')
+INSERT INTO Students VALUES('A00113', N'Pham Van O', '12/12/1987', N'Ha Noi', 'T1105L')
+INSERT INTO Students VALUES('A00114', N'Pham Van P', '12/12/1987', N'Ha Noi', 'T1105L')
+INSERT INTO Students VALUES('C00115', N'Pham Van Q', '12/12/1987', N'Ha Noi', 'C1105I')
+INSERT INTO Students VALUES('C00116', N'Pham Van R', '12/12/1987', N'Ha Noi', 'C1105I')
+INSERT INTO Students VALUES('C00117', N'Tran Thi Z', '12/12/1987', N'Ha Noi', 'C1105I')
+INSERT INTO Subjects VALUES('CF', 'Computer Fundamental', 5, 5)
+INSERT INTO Subjects VALUES('BDWS', 'Building Dinamic Website', 13, 13)
+INSERT INTO Subjects VALUES('EPC', 'Elementary Programing with C', 14, 14)
+INSERT INTO Subjects VALUES('MSSQL', 'Development Database with MS SQL Server', 13, 11)
+INSERT INTO Subjects VALUES('APJ1', 'Advance Programing Java 1', 9, 9)
+INSERT INTO Marks VALUES('C00111', 'CF', 14)
+INSERT INTO Marks VALUES('C00112', 'CF', 9)
+INSERT INTO Marks VALUES('C00113', 'CF', 22)
+INSERT INTO Marks VALUES('C00114', 'CF', 11)
+INSERT INTO Marks VALUES('C00115', 'CF', 7)
+INSERT INTO Marks VALUES('C00116', 'CF', 20)
+INSERT INTO Marks VALUES('C00117', 'CF', 24)
+INSERT INTO Marks VALUES('A00111', 'CF', 23.5)
+INSERT INTO Marks VALUES('A00112', 'CF', 14.75)
+INSERT INTO Marks VALUES('A00113', 'CF', 16)
+INSERT INTO Marks VALUES('A00114', 'CF', 18.5)
+INSERT INTO Marks VALUES('C00111', 'EPC', 14)
+INSERT INTO Marks VALUES('C00112', 'EPC', 9)
+INSERT INTO Marks VALUES('C00113', 'EPC', 22)
+INSERT INTO Marks VALUES('C00114', 'BDWS', 11)
+INSERT INTO Marks VALUES('C00115', 'MSSQL', 7)
+INSERT INTO Marks VALUES('C00116', 'BDWS', 20)
+INSERT INTO Marks VALUES('C00117', 'MSSQL', 24)
+INSERT INTO Marks VALUES('A00111', 'BDWS', 23.5)
+INSERT INTO Marks VALUES('A00112', 'EPC', 14.75)
+INSERT INTO Marks VALUES('A00113', 'MSSQL', 16)
+INSERT INTO Marks VALUES('A00114', 'EPC', 18.5)
 GO
 
---Tạo một DELETE trigger nhằm không cho phép xóa hẳn một student khỏi bảng Student,
---Thay vào đó ta sẽ chuyển giá trị của cột Deleted thành 1
-CREATE TRIGGER DeleteStudent
-ON Student
-FOR DELETE
-AS
-	BEGIN
-		DECLARE @ID int;		
-		SELECT @ID = ID FROM deleted;
-		ROLLBACK TRANSACTION;
-		UPDATE Student SET Deleted=1 WHERE ID=@ID;
-	END
-GO
---Kiểm tra sự hoạt động của trigger vừa tạo
---INSERT INTO Student VALUES('Teo', 20, 1)
--- Thực hiện xóa một sinh viên có ID là 1, sau khi thực hiện câu lệnh bên dưới thì
---bản ghi của sinh viên này không bị xóa đi, mà thay vào đó thì giá trị của cột Deleted
--- của bản ghi này sẽ có giá trị là 1
-
----Trigger ap dung cho xoa nhieu ban ghi
-ALTER TRIGGER DeleteStudent
-ON Student
-FOR DELETE
-AS
-	BEGIN
-		UPDATE Student SET Deleted=1 WHERE ID IN (SELECT ID FROM deleted);
-		ROLLBACK TRANSACTION;
-	END
-GO
-
-DELETE FROM Student WHERE ID=1
-GO
---Tạo một INSTEAD OF trigger nhằm đảm bảo rằng khi ta xóa một lớp ra khỏi bảng Class
--- thì đồng thời ta cũng xóa đi tất cả các sinh viên của lớp đó (thực sự thì các sinh viên
--- này chỉ bị chuyển sang trạng thái Delete=1 mà thôi)
-CREATE TRIGGER DeleteClass
-ON Class
-INSTEAD OF DELETE
-AS
-	BEGIN
-		DELETE FROM Student WHERE ClassID IN (SELECT ID FROM deleted);
-		UPDATE Class SET Deleted=1 WHERE ID IN (SELECT ID FROM deleted);
-	END
-	
-GO
---Kiểm tra sự hoạt động của trigger vừa tạo
---Hiển thị danh sách các lớp, danh sách sinh viên trước khi thực hiện thao tác xóa
-select * from Class
-select * from Student
---Tiến hành xóa một lớp, sau khi thực thi xong thì quay lại thực hiện câu lệnh 
--- để quan sát kết quả thu được
-DELETE FROM Class WHERE ID = 1
-
---Trigger voi VIEW:
-CREATE VIEW vStudent AS
-SELECT ID, Name, Deleted FROM Student
---Chi co the tao trigger tren view voi INSTEAD OF
-CREATE ALTER TRIGGER tgDelete_vStudent
-ON vStudent INSTEAD OF DELETE
+--Create STORE PROCEDURE
+---INSERT Classes
+CREATE PROCEDURE spInsertClasses
+	@ClassName varchar(15),
+	@Location nvarchar(100)
+	--@IsInsert int OUTPUT
 AS BEGIN
-	BEGIN
-		ROLLBACK TRANSACTION;
-		UPDATE Student SET Deleted=1 WHERE ID IN (SELECT ID FROM deleted);
+	IF EXISTS(SELECT ClassName FROM Classes WHERE ClassName=@ClassName)
+		--SET @IsInsert=0
+		RETURN 1
+	ELSE BEGIN
+		INSERT INTO Classes(ClassName, Location) VALUES(@ClassName, @Location)
+		--SET @IsInsert=1
+		RETURN 0
 	END
 END
---Kiem tra VIEW
-DELETE FROM vStudent WHERE ID=2
-
-
---Hiển thị định nghĩa của một Trigger
-EXEC sp_helptext 'DeleteStudent'
-
 GO
---Tạo một DDL trigger nhằm ngăn cản việc tạo một bảng mới trong CSDL hiện tại
-CREATE TRIGGER Create_Permission
-ON DATABASE
-FOR CREATE_TABLE
-AS
+---Delete Classes
+CREATE PROCEDURE spDeleteClasses
+	@ClassName varchar(15)
+AS BEGIN
+	IF EXISTS(SELECT ClassName FROM Classes WHERE ClassName=@ClassName)
 	BEGIN
-		PRINT 'Ban khong duoc tạo bang o day'
-		ROLLBACK
+		DELETE FROM Marks WHERE RollNo IN (SELECT RollNo FROM Students WHERE ClassName=@ClassName)
+		DELETE FROM Students WHERE ClassName=@ClassName
+		DELETE FROM Classes WHERE ClassName=@ClassName
+		RETURN 0
 	END
-	
+	ELSE
+		RETURN 1
+END
 GO
--- Kiểm tra sự hoạt động của trigger trên
-CREATE TABLE Test
-(
-	Test int
-)
-GO
---Tạo một DDL trigger để ngăn cản việc xóa một CSDL khỏi hệ thống
-CREATE TRIGGER Drop_Permission
-ON ALL SERVER
-FOR DROP_DATABASE
-AS
+---Update Classes
+CREATE PROCEDURE spUpdateClasses
+	@OldName varchar(15),
+	@NewName varchar(15),
+	@Location nvarchar(100)
+AS BEGIN
+	IF EXISTS(SELECT ClassName FROM Classes WHERE ClassName=@OldName)
 	BEGIN
-		PRINT 'Ban khong duoc xoa database'
-		ROLLBACK
+		IF EXISTS(SELECT ClassName FROM Classes WHERE ClassName=@NewName)
+			RETURN 2
+		ELSE BEGIN
+			UPDATE Classes SET ClassName=@NewName, Location=@Location WHERE ClassName=@OldName
+			RETURN 0
+		END
 	END
-
---Kiểm tra sự hoạt động của trigger trên
+	ELSE
+		RETURN 1
+END
 GO
-use master
+--- ***** _____ CREATE USER _____ ***** ---
+USE master
 GO
---Tiến hành xóa CSDL hiện tại là 'test'
-DROP DATABASE test
+IF EXISTS (SELECT * FROM syslogins WHERE name='sinhnx')
+BEGIN
+	EXEC sp_droplogin 'sinhnx'
+END
+GO
+EXEC sp_addlogin 'sinhnx', 'fat123456', 'LabDB'
+GO
+USE LabDB
+GO
+EXEC sp_grantdbaccess 'sinhnx'
+GO
+--Phan quyen
+GRANT INSERT, UPDATE, DELETE, SELECT ON Classes TO sinhnx
+GRANT INSERT, UPDATE, DELETE, SELECT ON Students TO sinhnx
+GRANT INSERT, UPDATE, DELETE, SELECT ON Subjects TO sinhnx
+GRANT INSERT, UPDATE, DELETE, SELECT ON Marks TO sinhnx
+GRANT EXECUTE ON spInsertClasses TO sinhnx
+GRANT EXECUTE ON spUpdateClasses TO sinhnx
+GRANT EXECUTE ON spDeleteClasses TO sinhnx
+GO
 
---Xem thông tin chi tiết của DDL trigger
-SELECT * FROM sys.triggers WHERE name='Create_Permission'
-
+SELECT * FROM Classes
